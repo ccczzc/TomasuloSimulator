@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
       exit(-1);
     }
     std::string op1, op2, op3;
-    std::cin >> op1 >> op2 >> op3;
+    iss >> op1 >> op2 >> op3;
     switch (instop) {
       case InstOp::LOAD:
       case InstOp::STORE:
@@ -54,4 +54,9 @@ int main(int argc, char **argv) {
         break;
     }
   }
+  TomasuloSimulator mysim(std::move(instructions));
+  mysim.PrintInstructions();
+  mysim.PrintStations();
+  mysim.PrintRegisterStatus();
+  return 0;
 }

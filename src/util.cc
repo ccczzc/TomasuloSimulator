@@ -8,11 +8,11 @@ Station::Station(std::string name, StationType station_type)
 
 ReservationStation::ReservationStation(std::string name,
                                        StationType station_type)
-    : Station(name, station_type), time_(static_cast<size_t>(-1)), Vj_(-1),
-      Vk_(-1), Qj_(nullptr), Qk_(nullptr) {}
+    : Station(name, station_type), time_(-1),
+    Qj_(nullptr), Qk_(nullptr) {}
 
 LoadStoreStation::LoadStoreStation(std::string name, StationType station_type)
-    : Station(name, station_type), Address_(-1) {}
+    : Station(name, station_type) {}
 
 RegisterStatus::RegisterStatus() : busy_(false), FU_(nullptr) {}
 
