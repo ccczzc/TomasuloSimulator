@@ -55,8 +55,6 @@ int main(int argc, char **argv) {
     }
   }
   TomasuloSimulator mysim(std::move(instructions));
-  mysim.PrintInstructions();
-  mysim.PrintStations();
-  mysim.PrintRegisterStatus();
+  mysim.Run();
   return 0;
 }

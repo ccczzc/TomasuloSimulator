@@ -19,6 +19,14 @@ public:
     TomasuloSimulator() = delete;
     TomasuloSimulator(std::vector<std::shared_ptr<Instruction>>&& instructions, const int num_load_stations = 3, const int num_add_rsstation = 3, const int num_mul_rsstation = 2);
     void PrintInstructions() const;
-    void PrintStations() const;
+    void PrintLoadAndReservStations() const;
     void PrintRegisterStatus() const;
+    void PrintStatistic() const;
+    void PrintAllInfo() const;
+
+    void Run();
+    void Step(size_t cycles = 1);
+    void RunToEnd();
+    void Backtrace(size_t cycles = 1);
+    static void PrintUsage();
 };
