@@ -1,0 +1,6 @@
+L.D     F8  21  R3
+L.D     F4  16  R4
+MUL.D   F2  F4  F6
+SUB.D   F10 F8  F4
+DIV.D   F12 F2  F8
+ADD.D   F8  F10 F4

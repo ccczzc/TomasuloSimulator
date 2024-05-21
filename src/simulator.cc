@@ -363,7 +363,6 @@ void TomasuloSimulator::SingleStep() {
   }
 }
 void TomasuloSimulator::Step(size_t cycles) {
-  std::cout << "Step " << cycles << '\n';
   if (IsFinish()) {
     std::cerr << "!!!All the instructions has been executed!!!\n";
     return;
@@ -474,12 +473,12 @@ void TomasuloSimulator::HelpPrintRegisterStatus(
     const std::unordered_map<std::string, std::shared_ptr<Station>>
         &register_status) {
   std::cout << "Register Result Status\n";
-  std::cout << "Reg\t\t";
+  std::cout << "Reg\t";
   for (int i = 0; i <= 30; i += 2) {
     std::cout << "F" << i << '\t';
   }
   std::cout << '\n';
-  std::cout << "FU\t\t";
+  std::cout << "FU\t";
   for (int i = 0; i <= 30; i += 2) {
     std::string fu = "F" + std::to_string(i);
     auto &reg_status = register_status.at(fu);
@@ -517,7 +516,7 @@ std::string InstOpToStr(InstOp instop) {
     ans = "SUB.D";
     break;
   case InstOp::MULD:
-    ans = "MUL.D";
+    ans = "MULT.D";
     break;
   case InstOp::DIVD:
     ans = "DIV.D";
