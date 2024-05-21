@@ -40,18 +40,20 @@ int main(int argc, char **argv) {
     std::string op1, op2, op3;
     iss >> op1 >> op2 >> op3;
     switch (instop) {
-      case InstOp::LOAD:
-      case InstOp::STORE:
-        instructions.push_back(std::make_shared<Instruction>(instop, curr_codeline, op2, op3, op1));
-        break;
-      case InstOp::ADDD:
-      case InstOp::SUBD:
-      case InstOp::MULD:
-      case InstOp::DIVD:
-        instructions.push_back(std::make_shared<Instruction>(instop, curr_codeline, op1, op2, op3));
-        break;
-      default:
-        break;
+    case InstOp::LOAD:
+    case InstOp::STORE:
+      instructions.push_back(
+          std::make_shared<Instruction>(instop, curr_codeline, op2, op3, op1));
+      break;
+    case InstOp::ADDD:
+    case InstOp::SUBD:
+    case InstOp::MULD:
+    case InstOp::DIVD:
+      instructions.push_back(
+          std::make_shared<Instruction>(instop, curr_codeline, op1, op2, op3));
+      break;
+    default:
+      break;
     }
   }
   TomasuloSimulator mysim(std::move(instructions));

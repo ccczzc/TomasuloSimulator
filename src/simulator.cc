@@ -369,8 +369,8 @@ void TomasuloSimulator::Step(size_t cycles) {
   }
   for (size_t i = 0; i < cycles && !IsFinish(); ++i) {
     SingleStep();
-    PrintAllInfo();
   }
+  PrintAllInfo();
 }
 void TomasuloSimulator::RunToEnd() {
   if (IsFinish()) {
@@ -379,8 +379,8 @@ void TomasuloSimulator::RunToEnd() {
   }
   while (!IsFinish()) {
     SingleStep();
-    PrintAllInfo();
   }
+  PrintAllInfo();
 }
 void TomasuloSimulator::Backtrace(size_t cycles) {
   if (cycles >= clocks_ || cycles <= 0) {
@@ -388,7 +388,7 @@ void TomasuloSimulator::Backtrace(size_t cycles) {
               << clocks_ << '\n';
     return;
   }
-  const auto& back_state = states_[cycles - 1];
+  const auto &back_state = states_[cycles - 1];
   std::cout << "!!!Backtrace to cycle " << cycles << "!!!\n";
   back_state.PrintAllInfo();
 }
@@ -398,10 +398,9 @@ void TomasuloSimulator::HelpPrintUsage() {
       << "v [i | l | r | s | a] : "
          "display instructions status | load and reservation stations | "
          "registers result status | statistics | all information aforesaid\n"
-      << "s [number(optional)] : step 1/number cycle(s)\n"
+      << "s [n(optional)] : step 1/n cycle(s)\n"
       << "r : run to the end\n"
-      << "b [number] : backtrace to view the infomation of number cycle(s) "
-         "ago\n"
+      << "b [n] : look back the info of the simulator at the nth clock cycle\n"
       << "q : quit the simulator\n";
 }
 void TomasuloSimulator::HelpPrintInstructions(

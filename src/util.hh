@@ -44,9 +44,7 @@ public:
   ~Station() = default;
   void ResetEmpty();
 
-  std::shared_ptr<Station> Clone() const {
-    return std::make_shared<Station>(*this);
-  }
+  std::shared_ptr<Station> Clone() const;
 };
 
 // Instruction class
@@ -67,9 +65,7 @@ public:
   Instruction(InstOp instop, std::string text, std::string rd_or_imm,
               std::string rs, std::string rt);
   ~Instruction() = default;
-  std::shared_ptr<Instruction> Clone() const {
-    return std::make_shared<Instruction>(*this);
-  }
+  std::shared_ptr<Instruction> Clone() const;
 };
 
 class SimulatorState {
