@@ -8,12 +8,17 @@
 #include <vector>
 class TomasuloSimulator {
 public:
-    size_t clocks_{0};
+    int clocks_{0};
     bool is_finished_{false};
+    const int loadstore_latency = 2;
+    const int adddsubd_latency = 2;
+    const int multd_latency = 10;
+    const int divd_latency = 40;
     std::vector<std::shared_ptr<Instruction>> instructions_;
     std::vector<std::shared_ptr<Station>> loadstore_stations_;
     std::vector<std::shared_ptr<Station>> reservation_stations_;
     std::unordered_map<std::string, std::string> registers_;
+    std::unordered_map<std::string, std::string> memory_;
     std::unordered_map<std::string, std::shared_ptr<Station>> register_status_;
 
 

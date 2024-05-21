@@ -42,13 +42,13 @@ int main(int argc, char **argv) {
     switch (instop) {
       case InstOp::LOAD:
       case InstOp::STORE:
-        instructions.push_back(std::make_shared<LoadStoreInst>(instop, curr_codeline, op1, op2, op3));
+        instructions.push_back(std::make_shared<Instruction>(instop, curr_codeline, op2, op3, op1));
         break;
       case InstOp::ADDD:
       case InstOp::SUBD:
       case InstOp::MULD:
       case InstOp::DIVD:
-        instructions.push_back(std::make_shared<RegisterInst>(instop, curr_codeline, op1, op2, op3));
+        instructions.push_back(std::make_shared<Instruction>(instop, curr_codeline, op1, op2, op3));
         break;
       default:
         break;
