@@ -22,61 +22,38 @@ enum class StationType {
   MULT,
 };
 
-// Base class, Station
+// Station, include 
+// ReservationStation, for add, sub, mult, div
+// LoadStation, for load, store
 class Station {
 public:
   std::string name_;
   StationType station_type_;
   InstOp instop_;
   bool busy_;
-
-  Station() = delete;
-  Station(std::string name, StationType station_type);
-  virtual ~Station() = default;
-};
-
-// ReservationStation, for add, sub, mult, div
-class ReservationStation : public Station {
-public:
   int time_;
   std::string Vj_;
   std::string Vk_;
-  std::shared_ptr<Station> Qj_;
-  std::shared_ptr<Station> Qk_;
-
-  ReservationStation() = delete;
-  ReservationStation(std::string name, StationType station_type);
-  virtual ~ReservationStation() = default;
-};
-
-// LoadStation, for load, store
-class LoadStoreStation : public Station {
-public:
+  std::shared_ptr<Station> Qj_{nullptr};
+  std::shared_ptr<Station> Qk_{nullptr};
   std::string Address_;
-
-  LoadStoreStation(std::string name, StationType station_type);
-  virtual ~LoadStoreStation() = default;
+  Station() = delete;
+  Station(std::string name, StationType station_type);
+  ~Station() = default;
 };
 
-// Register Status
-class RegisterStatus {
-public:
-  bool busy_;
-  std::shared_ptr<Station> FU_;
 
-  RegisterStatus();
-  ~RegisterStatus() = default;
-};
 
 // Base Instruction class
 class Instruction {
 public:
   InstOp instop_;
   std::string text_;
-  int issue_time_;
-  int exec_begin_time_;
-  int exec_end_time_;
-  int write_time_;
+  int issue_time_{-1};
+  int exec_begin_time_{-1};
+  int exec_end_time_{-1};
+  int write_time_{-1};
+  std::shared_ptr<Station> station_{nullptr};
   Instruction() = delete;
   Instruction(InstOp instop, std::string text);
   virtual ~Instruction() = default;

@@ -8,12 +8,13 @@
 #include <vector>
 class TomasuloSimulator {
 public:
-    size_t clocks_;
-
+    size_t clocks_{0};
+    bool is_finished_{false};
     std::vector<std::shared_ptr<Instruction>> instructions_;
-    std::vector<std::shared_ptr<LoadStoreStation>> load_stations_;
-    std::vector<std::shared_ptr<ReservationStation>> reservation_stations_;
-    std::unordered_map<std::string, RegisterStatus> register_status_;
+    std::vector<std::shared_ptr<Station>> loadstore_stations_;
+    std::vector<std::shared_ptr<Station>> reservation_stations_;
+    std::unordered_map<std::string, std::string> registers_;
+    std::unordered_map<std::string, std::shared_ptr<Station>> register_status_;
 
 
     TomasuloSimulator() = delete;
@@ -25,8 +26,10 @@ public:
     void PrintAllInfo() const;
 
     void Run();
+    void SingleStep();
     void Step(size_t cycles = 1);
     void RunToEnd();
     void Backtrace(size_t cycles = 1);
     static void PrintUsage();
+    static void PrintReservStation(const std::shared_ptr<Station>& reserv_station);
 };
