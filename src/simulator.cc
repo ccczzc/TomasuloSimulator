@@ -2,6 +2,7 @@
 #include "util.hh"
 #include <cstddef>
 #include <cstdlib>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -14,7 +15,9 @@ TomasuloSimulator::TomasuloSimulator(
     std::vector<std::shared_ptr<Instruction>> &&instructions,
     const int num_load_stations, const int num_add_rsstation,
     const int num_mul_rsstation)
-    : clocks_(0), is_finished_(false), instructions_(std::move(instructions)) {
+    : clocks_(0), raw_stalls_(0), war_stalls_(0),
+      instructions_(std::move(instructions)) {
+  num_left_instructions_ = instructions_.size();
   for (int i = 1; i <= num_load_stations; ++i) {
     loadstore_stations_.push_back(std::make_shared<Station>(
         "Load" + std::to_string(i), StationType::LOAD));
@@ -39,61 +42,19 @@ TomasuloSimulator::TomasuloSimulator(
   }
 }
 
+bool TomasuloSimulator::IsFinish() const { return num_left_instructions_ == 0; }
 void TomasuloSimulator::PrintInstructions() const {
-  std::cout << "Instruction Status\n";
-  std::cout << "Instruction\t\tIssue\tExec\tWrite\n";
-  for (auto &inst : instructions_) {
-    std::cout << inst->text_ << '\t';
-    if (inst->issue_time_ != -1)
-      std::cout << inst->issue_time_;
-    std::cout << '\t';
-    if (inst->exec_begin_time_ != -1 && inst->exec_begin_time_ <= clocks_) {
-      std::cout << inst->exec_begin_time_ << "~";
-      if (inst->exec_end_time_ != -1)
-        std::cout << inst->exec_end_time_;
-    }
-    std::cout << '\t';
-    if (inst->write_time_ != -1)
-      std::cout << inst->write_time_;
-    std::cout << "\t\n";
-  }
+  HelpPrintInstructions(instructions_, clocks_);
 }
 void TomasuloSimulator::PrintLoadAndReservStations() const {
-  std::cout << "Load Stations\n";
-  std::cout << "Name\t\tBusy\tAddress\t\n";
-  for (auto &load_station : loadstore_stations_) {
-    std::cout << load_station->name_ << "\t\t" << load_station->busy_ << '\t'
-              << load_station->Address_ << "\t\n";
-  }
-
-  std::cout << "Reservation Stations\n";
-  std::cout << "Time\tName\t\tBusy\tOp\tVj\t\tVk\t\tQj\tQk\t\n";
-  for (auto &reserv_station : reservation_stations_) {
-    PrintReservStation(reserv_station);
-  }
+  HelpPrintLoadAndReservStations(loadstore_stations_, reservation_stations_);
 }
 void TomasuloSimulator::PrintRegisterStatus() const {
-  std::cout << "Register Result Status\n";
-  std::cout << "Reg\t\t";
-  for (int i = 0; i <= 30; i += 2) {
-    std::cout << "F" << i << '\t';
-  }
-  std::cout << '\n';
-  std::cout << "FU\t\t";
-  for (int i = 0; i <= 30; i += 2) {
-    std::string fu = "F" + std::to_string(i);
-    auto &reg_status = register_status_.at(fu);
-    if (reg_status != nullptr) {
-      std::cout << reg_status->name_;
-    }
-    std::cout << '\t';
-  }
-  std::cout << "\t\n";
-}
 
+  HelpPrintRegisterStatus(register_status_);
+}
 void TomasuloSimulator::PrintStatistic() const {
-  std::cout << "Statistic\n";
-  std::cout << "Total:\n\t" << clocks_ << " cycle clocks executed\n";
+  HelpPrintStatistic(clocks_, raw_stalls_, war_stalls_);
 }
 void TomasuloSimulator::PrintAllInfo() const {
   PrintInstructions();
@@ -101,11 +62,36 @@ void TomasuloSimulator::PrintAllInfo() const {
   PrintRegisterStatus();
   PrintStatistic();
 }
+
+void TomasuloSimulator::StoreState() {
+  std::vector<std::shared_ptr<Instruction>> cloned_instructions;
+  for (const auto &instr : instructions_) {
+    cloned_instructions.push_back(instr->Clone());
+  }
+  std::vector<std::shared_ptr<Station>> cloned_loadstore_stations;
+  for (const auto &station : loadstore_stations_) {
+    cloned_loadstore_stations.push_back(station->Clone());
+  }
+  std::vector<std::shared_ptr<Station>> cloned_reservation_stations;
+  for (const auto &station : reservation_stations_) {
+    cloned_reservation_stations.push_back(station->Clone());
+  }
+  std::unordered_map<std::string, std::shared_ptr<Station>>
+      cloned_register_status;
+  for (const auto &[key, station] : register_status_) {
+    cloned_register_status[key] = station ? station->Clone() : nullptr;
+  }
+  states_.emplace_back(clocks_, raw_stalls_, war_stalls_,
+                       num_left_instructions_, cloned_instructions,
+                       cloned_loadstore_stations, cloned_reservation_stations,
+                       registers_, memory_, cloned_register_status);
+}
+
 void TomasuloSimulator::Run() {
   PrintInstructions();
   PrintLoadAndReservStations();
   PrintRegisterStatus();
-  PrintUsage();
+  HelpPrintUsage();
   bool is_terminated = false;
   while (!is_terminated) {
     std::cout << "Please input your command: ";
@@ -118,7 +104,7 @@ void TomasuloSimulator::Run() {
     case 'v':
       char view_type;
       if (!(iss >> view_type)) {
-        TomasuloSimulator::PrintUsage();
+        HelpPrintUsage();
         break;
       }
       switch (view_type) {
@@ -138,7 +124,7 @@ void TomasuloSimulator::Run() {
         PrintAllInfo();
         break;
       default:
-        TomasuloSimulator::PrintUsage();
+        HelpPrintUsage();
         break;
       }
       break;
@@ -167,15 +153,17 @@ void TomasuloSimulator::Run() {
       is_terminated = true;
       break;
     default:
-      TomasuloSimulator::PrintUsage();
+      HelpPrintUsage();
       break;
     }
   }
 }
 void TomasuloSimulator::SingleStep() {
-  if (!is_finished_) {
-    ++clocks_;
+  if (IsFinish()) {
+    std::cerr << "!!!All the instructions has been executed compeletely!!!\n";
+    return;
   }
+  ++clocks_;
   for (auto &inst : instructions_) {
     if (inst->write_time_ != -1) // writeback finished
       continue;
@@ -218,17 +206,20 @@ void TomasuloSimulator::SingleStep() {
             }
           }
         }
-        if (inst->instop_ != InstOp::LOAD && register_status_[inst->rd_or_imm_] == inst->station_) {
+        if (inst->instop_ != InstOp::LOAD &&
+            register_status_[inst->rd_or_imm_] == inst->station_) {
           registers_[inst->rd_or_imm_] = inst->result_;
           register_status_[inst->rd_or_imm_] = nullptr;
         }
         inst->station_->ResetEmpty();
+        --num_left_instructions_;
       } break;
       case InstOp::STORE:
         if (inst->station_->Qk_ == nullptr) {
           memory_[inst->result_] = inst->station_->Vk_;
           inst->station_->ResetEmpty();
           inst->write_time_ = clocks_;
+          --num_left_instructions_;
         }
         break;
       case InstOp::NONE:
@@ -258,7 +249,7 @@ void TomasuloSimulator::SingleStep() {
             break;
           case InstOp::NONE:
             break;
-          }    
+          }
         }
       } else {                         // execution not start
         if (inst->issue_time_ != -1) { // has issued
@@ -271,17 +262,17 @@ void TomasuloSimulator::SingleStep() {
             case InstOp::STORE: {
               inst->station_->Address_ =
                   inst->station_->Address_ + "+" + registers_[inst->rs_];
-              inst->station_->time_ += loadstore_latency;
+              inst->station_->time_ += loadstore_latency_;
             } break;
             case InstOp::ADDD:
             case InstOp::SUBD:
-              inst->station_->time_ += adddsubd_latency;
+              inst->station_->time_ += adddsubd_latency_;
               break;
             case InstOp::MULD:
-              inst->station_->time_ += multd_latency;
+              inst->station_->time_ += multd_latency_;
               break;
             case InstOp::DIVD:
-              inst->station_->time_ += divd_latency;
+              inst->station_->time_ += divd_latency_;
               break;
             case InstOp::NONE:
               break;
@@ -366,22 +357,43 @@ void TomasuloSimulator::SingleStep() {
       }
     }
   }
+  StoreState();
+  if (IsFinish()) {
+    std::cout << "!!!All the instructions are executed compeletely!!!\n";
+  }
 }
 void TomasuloSimulator::Step(size_t cycles) {
   std::cout << "Step " << cycles << '\n';
-  for (size_t i = 0; i < cycles && !is_finished_; ++i) {
+  if (IsFinish()) {
+    std::cerr << "!!!All the instructions has been executed!!!\n";
+    return;
+  }
+  for (size_t i = 0; i < cycles && !IsFinish(); ++i) {
     SingleStep();
     PrintAllInfo();
   }
-  if (is_finished_) {
-    std::cout << "!!!All the instructions has been executed!!!\n";
+}
+void TomasuloSimulator::RunToEnd() {
+  if (IsFinish()) {
+    std::cerr << "!!!All the instructions has been executed!!!\n";
+    return;
+  }
+  while (!IsFinish()) {
+    SingleStep();
+    PrintAllInfo();
   }
 }
-void TomasuloSimulator::RunToEnd() { std::cout << "Run to End \n"; }
 void TomasuloSimulator::Backtrace(size_t cycles) {
-  std::cout << "Backtrace " << cycles << '\n';
+  if (cycles >= clocks_ || cycles <= 0) {
+    std::cerr << "Please input a cycle clocks greater than 0 and less than "
+              << clocks_ << '\n';
+    return;
+  }
+  const auto& back_state = states_[cycles - 1];
+  std::cout << "!!!Backtrace to cycle " << cycles << "!!!\n";
+  back_state.PrintAllInfo();
 }
-void TomasuloSimulator::PrintUsage() {
+void TomasuloSimulator::HelpPrintUsage() {
   std::cout
       << "Usage: \n"
       << "v [i | l | r | s | a] : "
@@ -393,18 +405,62 @@ void TomasuloSimulator::PrintUsage() {
          "ago\n"
       << "q : quit the simulator\n";
 }
-void TomasuloSimulator::PrintReservStation(const std::shared_ptr<Station> &reserv_station) {
-  if (reserv_station->time_ != -1)
-    std::cout << reserv_station->time_;
-  std::cout << '\t';
-  std::cout << reserv_station->name_ << "\t\t";
-  std::cout << reserv_station->busy_ << '\t';
+void TomasuloSimulator::HelpPrintInstructions(
+    const std::vector<std::shared_ptr<Instruction>> &instructions,
+    const size_t clocks) {
+  std::cout << "Instruction Status\n";
+  std::cout << "Instruction\t\tIssue\tExec\tWrite\n";
+  for (auto &inst : instructions) {
+    std::cout << inst->text_ << '\t';
+    if (inst->issue_time_ != -1)
+      std::cout << inst->issue_time_;
+    std::cout << '\t';
+    if (inst->exec_begin_time_ != -1 &&
+        inst->exec_begin_time_ <= static_cast<int>(clocks)) {
+      std::cout << inst->exec_begin_time_ << "~";
+      if (inst->exec_end_time_ != -1)
+        std::cout << inst->exec_end_time_;
+    }
+    std::cout << '\t';
+    if (inst->write_time_ != -1)
+      std::cout << inst->write_time_;
+    std::cout << "\t\n";
+  }
+}
+void TomasuloSimulator::HelpPrintLoadAndReservStations(
+    const std::vector<std::shared_ptr<Station>> &loadstore_stations,
+    const std::vector<std::shared_ptr<Station>> &reservation_stations) {
+  std::cout << "Load Stations\n";
+  std::cout << "Name\t\tBusy\tAddress\t\n";
+  for (auto &load_station : loadstore_stations) {
+    std::cout << load_station->name_ << "\t\t" << load_station->busy_ << '\t'
+              << load_station->Address_ << "\t\n";
+  }
+
+  std::cout << "Reservation Stations\n";
+  std::cout << std::left << "Time" << '\t' << "Name"
+            << "\t\t"
+            << "Busy\tOp\t" << std::setw(32) << "Vj" << '\t' << std::setw(32)
+            << "Vk"
+            << "\tQj\tQk\t\n";
+  for (auto &reserv_station : reservation_stations) {
+    HelpPrintReservStation(reserv_station);
+  }
+}
+void TomasuloSimulator::HelpPrintReservStation(
+    const std::shared_ptr<Station> &reserv_station) {
+  if (reserv_station->time_ != -1) {
+    std::cout << std::left << reserv_station->time_;
+  }
+  std::cout << std::left << '\t' << reserv_station->name_ << "\t\t"
+            << reserv_station->busy_ << '\t';
   if (reserv_station->busy_ == false) {
     std::cout << "\t\n";
     return;
   }
-  std::cout << InstOpToStr(reserv_station->instop_) << '\t';
-  std::cout << reserv_station->Vj_ << "\t\t" << reserv_station->Vk_ << "\t\t";
+  std::cout << std::left << InstOpToStr(reserv_station->instop_) << '\t'
+            << std::setw(32) << reserv_station->Vj_ << '\t' << std::setw(32)
+            << reserv_station->Vk_ << '\t';
   if (reserv_station->Qj_ != nullptr) {
     std::cout << reserv_station->Qj_->name_;
   }
@@ -413,6 +469,37 @@ void TomasuloSimulator::PrintReservStation(const std::shared_ptr<Station> &reser
     std::cout << reserv_station->Qk_->name_;
   }
   std::cout << "\t\n";
+}
+void TomasuloSimulator::HelpPrintRegisterStatus(
+    const std::unordered_map<std::string, std::shared_ptr<Station>>
+        &register_status) {
+  std::cout << "Register Result Status\n";
+  std::cout << "Reg\t\t";
+  for (int i = 0; i <= 30; i += 2) {
+    std::cout << "F" << i << '\t';
+  }
+  std::cout << '\n';
+  std::cout << "FU\t\t";
+  for (int i = 0; i <= 30; i += 2) {
+    std::string fu = "F" + std::to_string(i);
+    auto &reg_status = register_status.at(fu);
+    if (reg_status != nullptr) {
+      std::cout << reg_status->name_;
+    }
+    std::cout << '\t';
+  }
+  std::cout << "\t\n";
+}
+
+void TomasuloSimulator::HelpPrintStatistic(const size_t clocks,
+                                           const int raw_stalls,
+                                           const int war_stalls) {
+  std::cout << "Statistic\n";
+  std::cout << "Total:\n\t" << clocks << " cycle clocks executed\n";
+  std::cout << "Stalls:\n"
+            << "\tRAW stalls: " << raw_stalls << "\n"
+            << "\tWAR stalls: " << war_stalls << "\n"
+            << "\tTotal: " << raw_stalls + war_stalls << "\n";
 }
 std::string InstOpToStr(InstOp instop) {
   std::string ans;

@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 // Instruction Type
 enum class InstOp {
@@ -41,9 +43,13 @@ public:
   Station(std::string name, StationType station_type);
   ~Station() = default;
   void ResetEmpty();
+
+  std::shared_ptr<Station> Clone() const {
+    return std::make_shared<Station>(*this);
+  }
 };
 
-// Base Instruction class
+// Instruction class
 class Instruction {
 public:
   InstOp instop_;
@@ -61,4 +67,34 @@ public:
   Instruction(InstOp instop, std::string text, std::string rd_or_imm,
               std::string rs, std::string rt);
   ~Instruction() = default;
+  std::shared_ptr<Instruction> Clone() const {
+    return std::make_shared<Instruction>(*this);
+  }
+};
+
+class SimulatorState {
+public:
+  size_t clocks_;
+  size_t raw_stalls_;
+  size_t war_stalls_;
+  size_t num_left_instructions_;
+  std::vector<std::shared_ptr<Instruction>> instructions_;
+  std::vector<std::shared_ptr<Station>> loadstore_stations_;
+  std::vector<std::shared_ptr<Station>> reservation_stations_;
+  std::unordered_map<std::string, std::string> registers_;
+  std::unordered_map<std::string, std::string> memory_;
+  std::unordered_map<std::string, std::shared_ptr<Station>> register_status_;
+
+  SimulatorState() = delete;
+  SimulatorState(size_t clocks, size_t raw_stalls, size_t war_stalls,
+                 size_t num_left_instructions,
+                 std::vector<std::shared_ptr<Instruction>> instructions,
+                 std::vector<std::shared_ptr<Station>> loadstore_stations,
+                 std::vector<std::shared_ptr<Station>> reservation_stations,
+                 std::unordered_map<std::string, std::string> registers,
+                 std::unordered_map<std::string, std::string> memory,
+                 std::unordered_map<std::string, std::shared_ptr<Station>>
+                     register_status);
+  ~SimulatorState() = default;
+  void PrintAllInfo() const;
 };
